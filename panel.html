@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>device-lab</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#141924; --panel2:#1b2130; --line:#2a3242;
+    --fg:#dbe2f0; --dim:#8b97ad; --accent:#39d0a0; --warn:#ffb454; --err:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:13px/1.45 ui-monospace,Consolas,'Cascadia Mono',monospace}
+  header{display:flex;align-items:center;gap:12px;padding:8px 14px;
+         background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  header h1{font-size:14px;margin:0;letter-spacing:.5px}
+  header .sp{flex:1}
+  .dot{width:9px;height:9px;border-radius:50%;background:#3a4254;display:inline-block}
+  .dot.on{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  main{display:flex;gap:14px;padding:14px;align-items:flex-start}
+  #stage{flex:0 0 auto}
+  #live{display:block;height:calc(100vh - 130px);max-width:44vw;border-radius:14px;
+        border:1px solid var(--line);background:#000;cursor:crosshair;touch-action:none;user-select:none}
+  #side{flex:1;min-width:340px;max-height:calc(100vh - 100px);overflow:auto;padding-right:4px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:12px}
+  .card h2{margin:0 0 8px;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--dim);font-weight:600}
+  button{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:7px;
+         padding:6px 10px;cursor:pointer;font:inherit;font-size:12px}
+  button:hover{border-color:var(--accent);color:#fff}
+  button.on{background:#1d3b32;border-color:var(--accent);color:#d6fff1}
+  button.danger:hover{border-color:var(--err);color:var(--err)}
+  button.mini{padding:3px 8px;font-size:11px}
+  .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
+  .row:last-child{margin-bottom:0}
+  input[type=text]{background:#0e131c;color:var(--fg);border:1px solid var(--line);border-radius:7px;
+                   padding:6px 8px;font:inherit;font-size:12px;min-width:0}
+  input[type=file]{font-size:11px;color:var(--dim)}
+  .grow{flex:1}
+  pre{margin:0;background:#0b0f17;border:1px solid var(--line);border-radius:8px;padding:8px;
+      white-space:pre-wrap;word-break:break-word;max-height:190px;overflow:auto;font-size:11.5px;color:#c9d4e6}
+  .lbl{color:var(--dim);font-size:11px}
+  #toast{position:fixed;right:16px;bottom:16px;background:var(--panel2);border:1px solid var(--accent);
+         border-radius:9px;padding:9px 14px;font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+  #toast.show{opacity:1}
+  .err{color:var(--err)} .ok{color:var(--accent)} .warn{color:var(--warn)}
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="liveDot"></span>
+  <h1>device-lab</h1>
+  <span class="lbl" id="fps">—</span>
+  <span class="sp"></span>
+  <button class="mini" id="btnPause">пауза</button>
+  <button class="mini" id="btnShot">снимок в shots/</button>
+  <button class="mini" id="btnUnlock">разблокировать</button>
+  <button class="mini" id="btnRefresh">обновить</button>
+  <button class="mini danger" id="btnReboot">перезагрузка</button>
+</header>
+
+<main>
+  <div id="stage"><img id="live" alt="экран телефона"></div>
+
+  <div id="side">
+
+    <div class="card">
+      <h2>Устройство</h2>
+      <div class="row">
+        <button data-key="4">назад</button>
+        <button data-key="3">домой</button>
+        <button data-key="187">обзор</button>
+        <button data-key="82">меню</button>
+        <button data-key="26">питание</button>
+        <button data-key="66">ввод</button>
+        <button data-key="67">⌫</button>
+      </div>
+      <pre id="info">…</pre>
+    </div>
+
+    <div class="card">
+      <h2>Приложение</h2>
+      <div class="row">
+        <input type="text" id="pkg" class="grow" value="ru.mooddiary">
+        <button id="btnLaunch">запустить</button>
+        <button id="btnStop">стоп</button>
+        <button id="btnClear" class="danger">стереть данные</button>
+      </div>
+      <div class="row">
+        <label class="lbl">APK:</label>
+        <input type="file" id="apkFile" accept=".apk">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>JS в WebView</h2>
+      <div class="row">
+        <input type="text" id="jsIn" class="grow" placeholder="document.title">
+        <button id="jsRun">выполнить</button>
+      </div>
+      <pre id="jsOut">—</pre>
+    </div>
+
+    <div class="card">
+      <h2>adb shell</h2>
+      <div class="row">
+        <input type="text" id="shIn" class="grow" value="dumpsys battery | head -3">
+        <button id="shRun">выполнить</button>
+      </div>
+      <pre id="shOut">—</pre>
+    </div>
+
+    <div class="card">
+      <h2>logcat</h2>
+      <div class="row">
+        <input type="text" id="logFilter" class="grow" placeholder="фильтр, напр. mooddiary">
+        <input type="text" id="logN" style="width:64px" value="60">
+        <button class="mini on" id="logAuto">авто</button>
+      </div>
+      <pre id="logOut">—</pre>
+    </div>
+
+    <div class="card">
+      <h2>Условия</h2>
+      <div class="row">
+        <span class="lbl">шрифт</span>
+        <button class="mini" data-font="1.0">1.0</button>
+        <button class="mini" data-font="1.15">1.15</button>
+        <button class="mini" data-font="1.3">1.3</button>
+        <span class="lbl">экран</span>
+        <button class="mini" data-size="720x1612">свой</button>
+        <button class="mini" data-size="480x854">узкий</button>
+        <button class="mini" data-size="1080x2400">большой</button>
+        <button class="mini" data-size="reset">сброс</button>
+      </div>
+      <div class="row">
+        <button class="mini" id="btnNight">тёмная тема</button>
+        <button class="mini" id="btnAnim">анимации: 0</button>
+        <button class="mini" id="btnPointer">координаты</button>
+        <button class="mini" id="btnRotate">поворот 0°</button>
+        <button class="mini" id="btnQuiet">погасить фон</button>
+      </div>
+      <div class="lbl">экспериментальные размеры меняют экран до сброса (wm size reset)</div>
+    </div>
+
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const img = $('live'), dot = $('liveDot'), fps = $('fps');
+let paused = false, logTimer = null, lastFrame = performance.now();
+
+function toast(msg, bad){
+  const t = $('toast'); t.textContent = msg; t.className = 'show';
+  if (bad) t.style.borderColor = 'var(--err)'; else t.style.borderColor = 'var(--accent)';
+  clearTimeout(t._h); t._h = setTimeout(()=>{ t.className=''; }, 1800);
+}
+async function get(url){
+  try { const r = await fetch(url, {cache:'no-store'}); return await r.text(); }
+  catch(e){ return 'ERR ' + e.message; }
+}
+async function post(url, body){
+  try { const r = await fetch(url, {method:'POST', body}); return await r.text(); }
+  catch(e){ return 'ERR ' + e.message; }
+}
+
+/* ---- живой экран: клик = тап, протяжка = свайп, колесо = прокрутка ---- */
+function nat(){ return { w: img.naturalWidth || 720, h: img.naturalHeight || 1612 }; }
+function toNative(ev){
+  const r = img.getBoundingClientRect(), n = nat();
+  return { x: Math.round((ev.clientX - r.left) / r.width * n.w),
+           y: Math.round((ev.clientY - r.top)  / r.height * n.h) };
+}
+let down = null;
+img.addEventListener('contextmenu', e => e.preventDefault());
+img.addEventListener('pointerdown', e => {
+  down = Object.assign(toNative(e), {t: Date.now()});
+  img.setPointerCapture(e.pointerId);
+});
+img.addEventListener('pointerup', e => {
+  if (!down) return;
+  const p = toNative(e), dt = Date.now() - down.t;
+  const dx = p.x - down.x, dy = p.y - down.y, dist = Math.hypot(dx, dy);
+  if (dist < 14) {
+    if (dt > 550) get(`/api/press?x=${p.x}&y=${p.y}&ms=${dt}`);
+    else get(`/api/tap?x=${p.x}&y=${p.y}`);
+  } else {
+    get(`/api/swipe?x1=${down.x}&y1=${down.y}&x2=${p.x}&y2=${p.y}&ms=${Math.max(140, dt)}`);
+  }
+  down = null;
+});
+img.addEventListener('wheel', e => {
+  e.preventDefault();
+  const n = nat(), cx = Math.round(n.w / 2), d = 620;
+  const y1 = e.deltaY > 0 ? Math.round(n.h * .68) : Math.round(n.h * .32);
+  const y2 = e.deltaY > 0 ? y1 - d : y1 + d;
+  get(`/api/swipe?x1=${cx}&y1=${y1}&x2=${cx}&y2=${y2}&ms=330`);
+}, {passive:false});
+
+function loop(){
+  if (paused) { setTimeout(loop, 250); return; }
+  img.onload = () => {
+    const dt = performance.now() - lastFrame; lastFrame = performance.now();
+    fps.textContent = (1000 / Math.max(dt, 1)).toFixed(1) + ' fps · ' + nat().w + '×' + nat().h;
+    dot.classList.add('on');
+    setTimeout(loop, 100);
+  };
+  img.onerror = () => { dot.classList.remove('on'); setTimeout(loop, 1200); };
+  img.src = '/api/shot.png?ts=' + Date.now();
+}
+loop();
+
+/* ---- устройство ---- */
+document.querySelectorAll('[data-key]').forEach(b =>
+  b.onclick = () => get('/api/key?code=' + b.dataset.key));
+$('btnPause').onclick = () => { paused = !paused; $('btnPause').classList.toggle('on', paused);
+                                $('btnPause').textContent = paused ? 'показ паузой' : 'пауза'; };
+$('btnShot').onclick = async () => toast(await get('/api/shot-save'));
+$('btnUnlock').onclick = () => get('/api/sys?op=unlock');
+$('btnReboot').onclick = () => { if (confirm('Перезагрузить телефон?')) get('/api/sys?op=reboot'); };
+$('btnRefresh').onclick = () => { loadInfo(); loadLogs(); toast('обновлено'); };
+
+async function loadInfo(){
+  try {
+    const r = await fetch('/api/info', {cache:'no-store'});
+    $('info').textContent = JSON.stringify(await r.json(), null, 1);
+  } catch(e){ $('info').textContent = 'ERR ' + e.message; }
+}
+loadInfo(); setInterval(loadInfo, 10000);
+
+/* ---- приложение ---- */
+const pkgVal = () => $('pkg').value.trim();
+$('btnLaunch').onclick = () => get('/api/app?op=launch&pkg=' + encodeURIComponent(pkgVal()));
+$('btnStop').onclick   = () => get('/api/app?op=stop&pkg=' + encodeURIComponent(pkgVal()));
+$('btnClear').onclick  = () => { if (confirm('Стереть данные ' + pkgVal() + '?'))
+                                   get('/api/app?op=clear&pkg=' + encodeURIComponent(pkgVal())); };
+$('apkFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  toast('ставлю ' + f.name);
+  $('jsOut').textContent = 'установка…';
+  $('jsOut').textContent = await post('/api/install?name=' + encodeURIComponent(f.name), await f.arrayBuffer());
+  e.target.value = '';
+};
+
+/* ---- консоль JS с историей ---- */
+let hist = [], hi = -1;
+async function runJs(){
+  const v = $('jsIn').value.trim(); if (!v) return;
+  hist.push(v); hi = hist.length;
+  $('jsOut').textContent = '…';
+  const t = await post('/api/js', v);
+  $('jsOut').textContent = t;
+  $('jsOut').className = t.startsWith('ERR') ? 'err' : 'ok';
+}
+$('jsRun').onclick = runJs;
+$('jsIn').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runJs();
+  if (e.key === 'ArrowUp'){ e.preventDefault(); if (hi > 0){ hi--; $('jsIn').value = hist[hi]; } }
+  if (e.key === 'ArrowDown'){ e.preventDefault(); if (hi < hist.length - 1){ hi++; $('jsIn').value = hist[hi]; } else { hi = hist.length; $('jsIn').value=''; } }
+});
+
+/* ---- shell ---- */
+$('shRun').onclick = async () => {
+  const v = $('shIn').value.trim(); if (!v) return;
+  $('shOut').textContent = '…';
+  $('shOut').textContent = await post('/api/shell', v);
+};
+
+/* ---- logcat ---- */
+async function loadLogs(){
+  const n = ($('logN').value || 60).trim();
+  const f = ($('logFilter').value || '').trim();
+  $('logOut').textContent = await get(`/api/logs?n=${encodeURIComponent(n)}&filter=${encodeURIComponent(f)}`);
+  if ($('logAuto').classList.contains('on')) $('logOut').scrollTop = $('logOut').scrollHeight;
+}
+$('logAuto').onclick = () => $('logAuto').classList.toggle('on');
+$('logFilter').addEventListener('keydown', e => { if (e.key === 'Enter') loadLogs(); });
+loadLogs(); logTimer = setInterval(loadLogs, 2500);
+
+/* ---- условия ---- */
+document.querySelectorAll('[data-font]').forEach(b =>
+  b.onclick = () => get('/api/sys?op=font&v=' + b.dataset.font));
+document.querySelectorAll('[data-size]').forEach(b =>
+  b.onclick = () => {
+    if (b.dataset.size === 'reset') get('/api/sys?op=sizeReset');
+    else if (confirm('Изменить размер экрана на ' + b.dataset.size + '?')) get('/api/sys?op=size&v=' + b.dataset.size);
+  });
+$('btnNight').onclick = () => get('/api/sys?op=night&v=yes');
+$('btnAnim').onclick = () => get('/api/sys?op=anim&v=' + ($('btnAnim').classList.contains('on') ? 1 : 0));
+$('btnPointer').onclick = () => get('/api/sys?op=pointer&v=' + ($('btnPointer').classList.contains('on') ? 0 : 1));
+$('btnRotate').onclick = () => get('/api/sys?op=rotate&v=' + ($('btnRotate').classList.contains('on') ? 0 : 1));
+$('btnQuiet').onclick = () => get('/api/sys?op=quiet');
+</script>
+</body>
+</html>

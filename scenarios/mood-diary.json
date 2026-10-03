@@ -1,0 +1,54 @@
+{
+  "name": "mood-diary: основной путь",
+  "package": "ru.mooddiary",
+  "steps": [
+    { "do": "app", "op": "launch" },
+    { "do": "wait", "ms": 3500 },
+    { "do": "js", "label": "онбординг закрыт", "expr": "(function(){var b=document.getElementById('onboardBtn'); if(b){b.click();return 'был, закрыт';} return 'не было';})()" },
+    { "do": "wait", "ms": 600 },
+    { "do": "shot", "name": "01-glavnyj" },
+    { "do": "js", "label": "все разделы на месте", "expr": "document.querySelectorAll('section.card').length", "expect": { "gte": 9 } },
+    { "do": "js", "label": "календарь подписан месяцем", "expr": "document.getElementById('calTitle').textContent", "expect": { "regex": "^[^\\d]+ ’\\d{2}$" } },
+    { "do": "js", "label": "теплокарта посчитана", "expr": "document.querySelectorAll('#slotHeat .sheat-row').length", "expect": { "gte": 3 } },
+    { "do": "js", "label": "число записей до", "expr": "JSON.parse(localStorage.getItem('mood_diary_v3')||'[]').length", "expect": { "gte": 0 } },
+
+    { "do": "js", "label": "оценка 6 выбрана", "expr": "(function(){var b=[...document.querySelectorAll('.quick button')].find(b=>b.textContent.trim()==='6'); if(!b) return 'нет кнопки'; b.click(); return 'ок';})()", "expect": { "eq": "ок" } },
+    { "do": "js", "label": "слот выбран", "expr": "(function(){var b=[...document.querySelectorAll('.seg button')].find(b=>b.textContent.trim()==='День'); if(!b) return 'нет'; b.click(); return 'ок';})()", "expect": { "eq": "ок" } },
+    { "do": "js", "label": "свой тег добавлен", "expr": "(function(){var i=document.getElementById('customTagInput'); if(!i) return 'нет поля'; i.value='лаборатория'; document.getElementById('addTagBtn').click(); return (document.getElementById('customTagInput').value==='')?'ок':'поле не очистилось';})()", "expect": { "eq": "ок" } },
+
+    { "do": "fill", "sel": "#note", "value": "Проверка ввода: ёлка и ë", "label": "кириллица дошла в поле", "expect": { "contains": "Проверка ввода" } },
+    { "do": "fill", "sel": "#customTagInput", "value": "эксперимент", "label": "поле тега принимает ввод", "expect": { "contains": "эксперимент" } },
+    { "do": "js", "label": "поле тега очищено кнопкой", "expr": "(function(){document.getElementById('addTagBtn').click(); return document.getElementById('customTagInput').value===''?'ок':'не очистилось';})()", "expect": { "eq": "ок" } },
+
+    { "do": "tapel", "sel": "#saveBtn", "label": "сохранение замера" },
+    { "do": "wait", "ms": 900 },
+    { "do": "js", "label": "запись записана", "expr": "JSON.parse(localStorage.getItem('mood_diary_v3')||'[]').length", "expect": { "gte": 1 } },
+    { "do": "js", "label": "карточка дня отрисована", "expr": "document.querySelectorAll('#dayCards > *').length", "expect": { "gte": 1 } },
+    { "do": "js", "label": "тег попал в словарь", "expr": "JSON.stringify(localStorage.getItem('mood_diary_custom_tags')||'').includes('лаборатория')", "expect": { "eq": "true" } },
+    { "do": "shot", "name": "02-posle-zapisi" },
+
+    { "do": "tapel", "sel": "#calNext", "label": "календарь вперёд" },
+    { "do": "wait", "ms": 500 },
+    { "do": "js", "label": "месяц сменился", "expr": "document.getElementById('calTitle').textContent", "expect": { "regex": "^[^\\d]+ ’\\d{2}$" } },
+    { "do": "tapel", "sel": "#calPrev", "label": "календарь назад" },
+    { "do": "wait", "ms": 500 },
+
+    { "do": "js", "label": "тема переключилась", "expr": "(function(){var a=DESIGN.theme; document.getElementById('themeBtn').click(); return a+' -> '+DESIGN.theme;})()", "expect": { "regex": "^(\\S+) -> (?!\\1$)" } },
+
+    { "do": "tapel", "sel": "#remAmBtn", "label": "напоминание утро вкл" },
+    { "do": "wait", "ms": 900 },
+    { "do": "js", "label": "время напоминания задано", "expr": "document.getElementById('remAm').value", "expect": { "regex": "^\\d{2}:\\d{2}$" } },
+    { "do": "shell", "label": "будильник запланирован системой", "args": ["dumpsys", "alarm"], "expect": { "contains": "mooddiary" } },
+    { "do": "tapel", "sel": "#remAmBtn", "label": "напоминание утро выкл" },
+    { "do": "wait", "ms": 700 },
+
+    { "do": "js", "label": "обработчики экспорта на месте", "expr": "['exportJson','exportCsv','importBtn','pdfBtn','clearBtn'].filter(id=>!document.getElementById(id).onclick).join(',')||'все'", "expect": { "eq": "все" } },
+
+    { "do": "app", "op": "stop" },
+    { "do": "wait", "ms": 800 },
+    { "do": "app", "op": "launch" },
+    { "do": "wait", "ms": 3500 },
+    { "do": "js", "label": "данные пережили перезапуск", "expr": "JSON.parse(localStorage.getItem('mood_diary_v3')||'[]').length", "expect": { "gte": 1 } },
+    { "do": "shot", "name": "03-posle-perezapuska" }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "name": "docs: скриншоты дневника",
+  "package": "ru.mooddiary",
+  "steps": [
+    { "do": "app", "op": "launch" },
+    { "do": "wait", "ms": 3000 },
+    { "do": "js", "label": "онбординг закрыт", "expr": "(function(){var b=document.getElementById('onboardBtn'); if(b){b.click();return 'закрыт';} return 'не было';})()" },
+
+    { "do": "js", "label": "демо-данные загружены", "expr": "(function(){ localStorage.removeItem('mood_diary_seen'); var base='mood_diary_v3'; var rows=[['2026-09-18','am',7,6,7.5,0,[],'выспался, утренняя пробежка'],['2026-09-18','pm',6,5,null,0,['работа'],'тяжёлый день, но справился'],['2026-09-19','am',5,5,6,0,[],''],['2026-09-19','pm',7,6,null,2,['люди'],'вечер с друзьями'],['2026-09-20','am',4,4,5.5,0,['сон'],'плохо спалось'],['2026-09-20','pm',5,5,null,0,['работа','тревога'],''],['2026-09-21','am',6,6,7,1,[],'открытие'],['2026-09-21','pm',7,7,null,2,['люди'],'свидание'],['2026-09-22','am',5,4,null,0,[],''],['2026-09-22','pm',6,6,null,0,['работа'],'дедлайн пережил'],['2026-09-23','am',6,6,7,0,[],''],['2026-09-23','pm',8,7,null,2,['отдых','люди'],'отпуск начался'],['2026-09-24','am',8,8,null,0,['отдых'],'ничего не делать'],['2026-09-24','pm',8,7,null,0,['отдых'],'второй день отпуска'],['2026-09-25','am',7,7,null,0,['отдых'],''],['2026-09-25','pm',7,6,null,0,[],''],['2026-09-26','am',6,6,6.5,1,[],''],['2026-09-26','pm',5,4,null,0,['работа','тревога'],'не высыпался'],['2026-09-27','am',6,6,null,0,[],''],['2026-09-27','pm',7,7,null,0,['здоровье','люди'],'']]; var out=rows.map(function(r){return {id:r[0]+'__'+r[1],date:r[0],slot:r[1],ts:r[0]+'T'+(r[1]==='am'?'08:00:00':r[1]==='pm'?'21:00:00':'14:00:00'),mood:r[2],energy:r[3],sleep:r[4],sport:r[5],tags:r[6],note:r[7]};}); localStorage.setItem(base, JSON.stringify(out)); localStorage.setItem('mood_diary_seen','1'); location.reload(); return 'записей: '+out.length; })()", "expect": { "contains": "записей" } },
+    { "do": "wait", "ms": 3000 },
+    { "do": "js", "label": "тема тёмная для съёмки", "expr": "(function(){ if(DESIGN.theme!=='dark'){document.getElementById('themeBtn').click();} if(DESIGN.theme!=='dark'){document.getElementById('themeBtn').click();} return DESIGN.theme; })()", "expect": { "eq": "dark" } },
+    { "do": "wait", "ms": 800 },
+
+    { "do": "shot", "name": "01-glavnyj" },
+    { "do": "js", "expr": "(function(){var c=document.querySelector('#heatmap'); c.scrollIntoView({block:'start'}); window.scrollBy(0,-90); return 'календарь';})()" },
+    { "do": "wait", "ms": 900 },
+    { "do": "shot", "name": "02-kalendar-teplokarta" },
+    { "do": "js", "expr": "(function(){var c=document.querySelector('#slotHeat'); c.scrollIntoView({block:'start'}); window.scrollBy(0,-90); return 'теплокарта';})()" },
+    { "do": "wait", "ms": 900 },
+    { "do": "shot", "name": "03-teplokarta" },
+    { "do": "js", "expr": "(function(){var c=[...document.querySelectorAll('h2')].find(h=>h.textContent.indexOf('Линия')>=0); c.scrollIntoView({block:'start'}); window.scrollBy(0,-90); return 'график';})()" },
+    { "do": "wait", "ms": 900 },
+    { "do": "shot", "name": "04-liniya-sostoyaniya" },
+    { "do": "js", "expr": "(function(){var c=[...document.querySelectorAll('h2')].find(h=>h.textContent.indexOf('Теги')>=0); c.scrollIntoView({block:'start'}); window.scrollBy(0,-90); return 'теги';})()" },
+    { "do": "wait", "ms": 900 },
+    { "do": "shot", "name": "05-tegi" },
+    { "do": "js", "expr": "(function(){var c=[...document.querySelectorAll('h2')].find(h=>h.textContent.indexOf('Сводка')>=0); c.scrollIntoView({block:'start'}); window.scrollBy(0,-90); return 'сводка';})()" },
+    { "do": "wait", "ms": 900 },
+    { "do": "shot", "name": "06-svodka" },
+    { "do": "js", "expr": "(function(){var c=[...document.querySelectorAll('h2')].find(h=>h.textContent.indexOf('Выводы')>=0); c.scrollIntoView({block:'start'}); window.scrollBy(0,-90); return 'выводы';})()" },
+    { "do": "wait", "ms": 900 },
+    { "do": "shot", "name": "07-vyvody" },
+    { "do": "js", "expr": "(function(){var c=[...document.querySelectorAll('h2')].find(h=>h.textContent.indexOf('Журнал')>=0); c.scrollIntoView({block:'start'}); window.scrollBy(0,-90); return 'журнал';})()" },
+    { "do": "wait", "ms": 900 },
+    { "do": "shot", "name": "08-zhurnal" },
+    { "do": "js", "expr": "window.scrollTo(0,0); 'наверх'" },
+    { "do": "wait", "ms": 700 },
+
+    { "do": "js", "label": "чистим демо-данные", "expr": "(function(){localStorage.removeItem('mood_diary_v3'); location.reload(); return 'очищено';})()" },
+    { "do": "wait", "ms": 2500 }
+  ]
+}

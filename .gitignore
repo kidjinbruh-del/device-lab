@@ -1,0 +1,15 @@
+# Снимки, прогоны и служебный кэш — это не исходники
+shots/
+runs/
+layout/
+lab-state/
+
+# Панель и прогоны создают файлы на лету
+*.log
+*.err
+panel.log
+panel.err
+
+# Стороннее
+node_modules/
+tools/*.apk

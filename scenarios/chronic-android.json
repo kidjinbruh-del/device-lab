@@ -1,0 +1,49 @@
+{
+  "name": "chronic-android: экраны и ввод замера",
+  "package": "ru.chronicnotebook",
+  "steps": [
+    { "do": "app", "op": "launch" },
+    { "do": "wait", "ms": 3000 },
+    { "do": "uiatap", "label": "вкладка Дом", "text": "Дом" },
+    { "do": "wait", "ms": 1200 },
+    { "do": "uiatxt", "label": "главный экран на месте", "text": "Дневник давления", "expect": { "eq": "ok" } },
+    { "do": "uiatxt", "label": "сводка видна", "text": "Сводка", "expect": { "eq": "ok" } },
+    { "do": "shot", "name": "01-dom" },
+
+    { "do": "uiatap", "label": "вкладка Замер", "text": "Замер" },
+    { "do": "wait", "ms": 1200 },
+    { "do": "uiatxt", "label": "экран нового замера", "text": "Новый замер", "expect": { "eq": "ok" } },
+    { "do": "uiatxt", "label": "поле пульса есть", "text": "Пульс", "expect": { "eq": "ok" } },
+    { "do": "shot", "name": "02-zamer" },
+
+    { "do": "uiatapclass", "label": "фокус в «Верхнее»", "class": "EditText", "index": 1 },
+    { "do": "wait", "ms": 700 },
+    { "do": "uiatapclass", "label": "фокус в «Нижнее»", "class": "EditText", "index": 2 },
+    { "do": "wait", "ms": 500 },
+    { "do": "uiatapclass", "label": "фокус в «Пульс»", "class": "EditText", "index": 3 },
+    { "do": "wait", "ms": 500 },
+    { "do": "text", "value": "64" },
+    { "do": "wait", "ms": 600 },
+    { "do": "key", "code": "back" },
+    { "do": "wait", "ms": 800 },
+    { "do": "shot", "name": "03-vvod" },
+
+    { "do": "uiatap", "label": "вкладка Лекарства", "text": "Лекарства" },
+    { "do": "wait", "ms": 1200 },
+    { "do": "shot", "name": "04-lekarstva" },
+    { "do": "uiatap", "label": "вкладка Связи", "text": "Связи" },
+    { "do": "wait", "ms": 1200 },
+    { "do": "shot", "name": "05-svyazi" },
+    { "do": "uiatap", "label": "возврат на Дом", "text": "Дом" },
+    { "do": "wait", "ms": 1200 },
+    { "do": "uiatxt", "label": "вернулись на главный", "text": "Дневник давления", "expect": { "eq": "ok" } },
+
+    { "do": "app", "op": "stop" },
+    { "do": "wait", "ms": 1000 },
+    { "do": "app", "op": "launch" },
+    { "do": "wait", "ms": 3000 },
+    { "do": "uiatxt", "label": "приложение поднялось заново", "text": "Дневник давления", "expect": { "eq": "ok" } },
+    { "do": "log", "label": "без фатальных ошибок", "filter": "FATAL EXCEPTION", "lines": 20, "expect": { "empty": true } },
+    { "do": "shot", "name": "06-posle-perezapuska" }
+  ]
+}
