@@ -26,15 +26,20 @@ function Invoke-Adb {
 }
 
 function Get-ScreenSize {
-  <# Физический размер экрана как @{w=;h=}. #>
+  <# Физический размер экрана как @{w=;h=}.
+     При `wm size 1080x2400` вывод содержит и Override, и Physical: брать надо
+     Override, иначе всё, что шире 720 px, ошибочно считается вылетом за экран. #>
   $out = (Invoke-Adb -Args @('shell', 'wm', 'size') -Quiet) -join ' '
+  if ($out -match 'Override size:\s*(\d+)x(\d+)') {
+    return @{ w = [int]$Matches[1]; h = [int]$Matches[2]; override = $true }
+  }
   if ($out -match 'Physical size:\s*(\d+)x(\d+)') {
-    return @{ w = [int]$Matches[1]; h = [int]$Matches[2] }
+    return @{ w = [int]$Matches[1]; h = [int]$Matches[2]; override = $false }
   }
   if ($out -match '(\d+)x(\d+)') {
-    return @{ w = [int]$Matches[1]; h = [int]$Matches[2] }
+    return @{ w = [int]$Matches[1]; h = [int]$Matches[2]; override = $false }
   }
-  return @{ w = 720; h = 1612 }
+  return @{ w = 720; h = 1612; override = $false }
 }
 
 function Save-Screenshot {
@@ -222,9 +227,17 @@ function Find-UiNode {
 
 function Get-WebViewTarget {
   param([switch]$Refresh)
-  $pid_ = (Invoke-Adb -Args @('shell', 'pidof', 'ru.mooddiary') -Quiet | Select-Object -First 1)
-  if (-not $pid_) { $pid_ = (Invoke-Adb -Args @('shell', 'pidof', 'ru.chronicnotebook') -Quiet | Select-Object -First 1) }
-  $pid_ = "$pid_".Trim()
+  # Ищем процесс приложения на экране: так лаборатория работает с любым
+  # приложением с WebView, а не только с двумя «своими».
+  $pid_ = ''
+  $fg = Get-ForegroundPackage
+  if ($fg) { $pid_ = "$(Invoke-Adb -Args @('shell', 'pidof', $fg) -Quiet | Select-Object -First 1)".Trim() }
+  if (-not $pid_) {
+    foreach ($pkg in @('ru.mooddiary', 'ru.chronicnotebook', 'ru.drevo.yazyka')) {
+      $p = "$(Invoke-Adb -Args @('shell', 'pidof', $pkg) -Quiet | Select-Object -First 1)".Trim()
+      if ($p) { $pid_ = $p; break }
+    }
+  }
   if (-not $pid_) { throw 'Приложение не запущено: WebView-таргет не найден' }
   Invoke-Adb -Args @('forward', '--remove', "tcp:$($script:DevToolsPort)") -Quiet | Out-Null
   Invoke-Adb -Args @('forward', "tcp:$($script:DevToolsPort)", "localabstract:webview_devtools_remote_$pid_") -Quiet | Out-Null

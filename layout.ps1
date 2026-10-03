@@ -86,23 +86,32 @@ function Audit-Native {
       $issues += ('"' + ($n.text -replace '\s+', ' ') + '" выходит за экран: ' + $n.bounds)
     }
   }
-  # Узкая подпись = вероятный перенос по буквам. Ориентируемся на медиану
-  # «пикселей на символ» по всем подписям: выбросы в 2+ раза ниже — подозрительны.
-  $per = @()
-  foreach ($n in $nodes) {
-    $len = "$($n.text)".Trim().Length
-    if ($len -ge 4) { $per += [double](($n.x2 - $n.x1) / $len) }
-  }
-  if ($per.Count -ge 6) {
-    $sorted = @($per | Sort-Object)
-    $median = $sorted[[int]($sorted.Count / 2)]
-    foreach ($n in $nodes) {
+  # Узкая подпись = вероятный перенос по буквам. Считаем медиану «пикселей на
+  # символ» только по КОРОТКИМ подписям (4–24 символа): у длинных абзацев
+  # плотность всегда ниже, и раньше они попадали в ложные срабатывания.
+  # Дополнительно требуем, чтобы подпись была ещё и заметно выше медианы —
+  # именно так выглядит текст, разложенный в столбик.
+  $short = @($nodes | Where-Object {
+      $len = "$($_.text)".Trim().Length
+      $len -ge 4 -and $len -le 24
+    })
+  if ($short.Count -ge 5) {
+    $ppc = @(); $heights = @()
+    foreach ($n in $short) {
+      $len = "$($n.text)".Trim().Length
+      $ppc += [double](($n.x2 - $n.x1) / $len)
+      $heights += [double]($n.y2 - $n.y1)
+    }
+    $sp = @($ppc | Sort-Object); $sh = @($heights | Sort-Object)
+    $medPpc = $sp[[int]($sp.Count / 2)]
+    $medH = $sh[[int]($sh.Count / 2)]
+    foreach ($n in $short) {
       $t = "$($n.text)".Trim()
       $len = $t.Length
-      if ($len -lt 6 -or $median -le 0) { continue }
-      $ppc = ($n.x2 - $n.x1) / $len
-      if ($ppc -lt $median * 0.5) {
-        $issues += ('"' + ($t -replace '\s+', ' ') + '" подозрительно узкая подпись: ' + [math]::Round($ppc, 1) + ' px/символ при медиане ' + [math]::Round($median, 1))
+      $v = ($n.x2 - $n.x1) / $len
+      $h = $n.y2 - $n.y1
+      if ($v -lt $medPpc * 0.5 -and $h -gt $medH * 1.6) {
+        $issues += ('"' + ($t -replace '\s+', ' ') + '" подозрительно узкая подпись: ' + [math]::Round($v, 1) + ' px/символ и высота ' + [math]::Round($h) + ' px при медиане ' + [math]::Round($medPpc, 1) + '/' + [math]::Round($medH))
       }
     }
   }
