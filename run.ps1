@@ -121,6 +121,22 @@ foreach ($step in $sc.steps) {
         Start-Sleep -Milliseconds $ms
         Log "  [$i] ждём ${ms}мс"
       }
+      # Ожидание по содержимому экрана, а не по часам. Живой замер идёт
+      # от 15 секунд на быстром канале до минуты на медленном, и фиксированная
+      # пауза регулярно снимала кадр «результата» посреди отдачи.
+      'waittext' {
+        $limit = if ($step.timeout) { [int]$step.timeout } else { 30000 }
+        $until = (Get-Date).AddMilliseconds($limit)
+        $found = $false
+        while ((Get-Date) -lt $until) {
+          if (Find-UiNode -Text $step.text -Refresh) { $found = $true; break }
+          Start-Sleep -Milliseconds 1200
+        }
+        $detail = if ($found) { "«$($step.text)» появилось" } else { "«$($step.text)» не появилось за $limit мс" }
+        if ($step.expect) { Check-Expect $label $(if ($found) { 'ok' } else { 'none' }) $step.expect }
+        elseif (-not $found) { Bad $label $detail }
+        else { Log "  [$i] $detail" }
+      }
       'app' {
         $p = if ($step.pkg) { $step.pkg } else { $pkg }
         switch ($step.op) {

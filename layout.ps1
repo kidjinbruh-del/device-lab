@@ -229,6 +229,40 @@ try {
       }
       Invoke-Adb -Args @('shell', 'am', 'force-stop', 'ru.drevo.yazyka') -Quiet | Out-Null
     }
+    if (-not $App -or $App -eq 'speedmeter') {
+      Write-Host '  спидометр:'
+      # Отладочная сборка ставится рядом с релизной (applicationIdSuffix),
+      # поэтому на стенде проверяем её — она же попадает в снимки.
+      $pkg = 'ru.speedmeter.app.debug'
+      $act = "$pkg/ru.speedmeter.app.MainActivity"
+      Invoke-Adb -Args @('shell', 'am', 'start', '-n', $act) -Quiet | Out-Null
+      Start-Sleep -Seconds 4
+      $report.Add('')
+      $report.Add('### speedmeter')
+      $i = 0
+      foreach ($tab in @('01-glavnyj', '02-rezultat')) {
+        $i++
+        if ($tab -eq '02-rezultat') {
+          # Живой замер: ждём, пока отработает загрузка и отдача.
+          try {
+            $n = (Find-UiNode -Text 'Измерить' -Refresh) | Select-Object -First 1
+            if ($n) { Invoke-Adb -Args @('shell', 'input', 'tap', $n.x, $n.y) -Quiet | Out-Null }
+          } catch { }
+          Start-Sleep -Seconds 30
+        }
+        Save-Screenshot -Path (Join-Path $OutDir ("speedmeter-{0}-{1}-{2}.png" -f $p.name, $i, $tab)) | Out-Null
+        $a = Audit-Native
+        $total++
+        if ($a.issues.Count -gt 0) {
+          $bad++
+          Write-Host ("    [проблема] {0}: {1}" -f $tab, ($a.issues -join '; ')) -ForegroundColor Red
+        } else {
+          Write-Host ("    ок  {0}" -f $tab) -ForegroundColor DarkGreen
+        }
+        $report.Add("- экран $tab`: " + $(if ($a.issues.Count) { '**' + ($a.issues -join '; ') + '**' } else { 'ок' }))
+      }
+      Invoke-Adb -Args @('shell', 'am', 'force-stop', $pkg) -Quiet | Out-Null
+    }
     $report.Add('')
   }
 } finally {

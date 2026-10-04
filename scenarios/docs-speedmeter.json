@@ -1,0 +1,34 @@
+{
+  "name": "docs: скриншоты спидометра",
+  "package": "ru.speedmeter.app.debug",
+  "steps": [
+    { "do": "app", "op": "launch" },
+    { "do": "waittext", "text": "Измерить", "timeout": 40000, "expect": { "eq": "ok" } },
+    { "do": "wait", "ms": 2500 },
+    { "do": "shot", "name": "01-glavnyj" },
+
+    { "do": "uiatap", "text": "Настройки", "refresh": true },
+    { "do": "waittext", "text": "Длительность замера", "timeout": 15000, "expect": { "eq": "ok" } },
+    { "do": "wait", "ms": 700 },
+    { "do": "shot", "name": "02-nastroyki" },
+    { "do": "key", "code": "back" },
+    { "do": "waittext", "text": "Измерить", "timeout": 15000, "expect": { "eq": "ok" } },
+
+    { "do": "uiatap", "text": "Измерить", "refresh": true },
+    { "do": "waittext", "text": "Загрузка", "timeout": 90000, "expect": { "eq": "ok" } },
+    { "do": "wait", "ms": 2500 },
+    { "do": "shot", "name": "03-zamer-idet" },
+
+    { "do": "waittext", "text": "Измерить", "timeout": 120000, "expect": { "eq": "ok" } },
+    { "do": "wait", "ms": 1200 },
+    { "do": "shot", "name": "04-rezultat" },
+
+    { "do": "uiatap", "text": "Измерить", "refresh": true },
+    { "do": "waittext", "text": "Измерить", "timeout": 120000, "expect": { "eq": "ok" } },
+    { "do": "swipe", "x": 360, "y": 1200, "dir": "up", "ms": 400 },
+    { "do": "wait", "ms": 900 },
+    { "do": "shot", "name": "05-istoriya" },
+
+    { "do": "log", "filter": "FATAL EXCEPTION", "expect": { "empty": true } }
+  ]
+}
