@@ -90,7 +90,7 @@ switch ($Command.ToLower()) {
     Check 'блокировка экрана отключена' ("$lock" -match 'true') "$lock"
     $fg = Get-ForegroundPackage
     Check 'на экране приложение' ($fg -match '^ru\.') "сейчас: $fg"
-    foreach ($pkg in @('ru.mooddiary', 'ru.chronicnotebook')) {
+    foreach ($pkg in @('ru.mooddiary', 'ru.chronicnotebook', 'ru.drevo.yazyka')) {
       $d = Invoke-Adb -Args @('shell', 'dumpsys', 'package', $pkg) -Quiet | Select-String -Pattern 'versionName=(\S+)' | Select-Object -First 1
       $vn = if ($d) { "$d".Trim() } else { 'не установлено' }
       Check "пакет $pkg" ($vn -ne 'не установлено') $vn

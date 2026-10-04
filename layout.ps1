@@ -33,6 +33,9 @@ $Profiles = @(
   @{ name = 'night';             size = '';            font = '1.0';  rotate = 0; night = 'yes' }
 )
 
+# Вкладки «древа языка»: проверяем те же четыре, что и на телефоне
+$DrevoTabs = @('Дерево', 'Правила', 'Тренировка', 'Родителям')
+
 # Экраны дневника: подпись + JS, который прокручивает к нужному месту
 $DiaryScreens = @(
   @{ name = '01-top';       scroll = 'window.scrollTo(0,0);' }
@@ -114,6 +117,19 @@ function Audit-Native {
         $issues += ('"' + ($t -replace '\s+', ' ') + '" подозрительно узкая подпись: ' + [math]::Round($v, 1) + ' px/символ и высота ' + [math]::Round($h) + ' px при медиане ' + [math]::Round($medPpc, 1) + '/' + [math]::Round($medH))
       }
     }
+    # Короткая подпись в две и более строки — почти всегда перенос по
+    # слогам («Правил а», «Тренир овка»). Считаем высоту одной строки как
+    # наименьшую среди подписей этого экрана: медиана завышена абзацами.
+    $oneLine = ($short | ForEach-Object { [double]($_.y2 - $_.y1) } | Measure-Object -Minimum).Minimum
+    if ($oneLine -gt 0) {
+      foreach ($n in $short) {
+        $t = "$($n.text)".Trim()
+        $h = [double]($n.y2 - $n.y1)
+        if ($t.Length -le 16 -and $h -gt $oneLine * 1.6) {
+          $issues += ('"' + ($t -replace '\s+', ' ') + '" переносится на ' + [math]::Round($h / $oneLine, 1) + ' строки (' + [math]::Round($h) + ' px при строке ' + [math]::Round($oneLine) + ' px)')
+        }
+      }
+    }
   }
   return @{ issues = $issues; width = "$($size.w)px" }
 }
@@ -187,6 +203,40 @@ try {
         $report.Add("- вкладка $tab`: " + $(if ($a.issues.Count) { '**' + ($a.issues -join '; ') + '**' } else { 'ок' }))
       }
       Invoke-Adb -Args @('shell', 'am', 'force-stop', 'ru.chronicnotebook') -Quiet | Out-Null
+    }
+
+    if (-not $App -or $App -eq 'drevo-yazyka') {
+      Write-Host '  древо языка:'
+      Invoke-Adb -Args @('shell', 'am', 'start', '-n', 'ru.drevo.yazyka/.MainActivity') -Quiet | Out-Null
+      Start-Sleep -Seconds 5
+      $report.Add('')
+      $report.Add('### drevo-yazyka')
+      $i = 0
+      foreach ($tab in $DrevoTabs) {
+        $i++
+        try {
+          $n = (Find-UiNode -Text $tab -Refresh) | Select-Object -First 1
+          if ($n) {
+            Invoke-Adb -Args @('shell', 'input', 'tap', $n.x, $n.y) -Quiet | Out-Null
+            Start-Sleep -Milliseconds 1500
+          }
+        } catch { }
+        # Вкладки ниже листа не помещаются: прокручиваем, чтобы аудит видел
+        # нижние кнопки — именно они раньше схлопывались в полоску.
+        Invoke-Adb -Args @('shell', 'input', 'swipe', 360, 1100, 360, 400, 400) -Quiet | Out-Null
+        Start-Sleep -Milliseconds 700
+        Save-Screenshot -Path (Join-Path $OutDir ("drevo-{0}-{1:D2}-{2}.png" -f $p.name, $i, $tab)) | Out-Null
+        $a = Audit-Native
+        $total++
+        if ($a.issues.Count -gt 0) {
+          $bad++
+          Write-Host ("    [проблема] {0}: {1}" -f $tab, ($a.issues -join '; ')) -ForegroundColor Red
+        } else {
+          Write-Host ("    ок  {0}" -f $tab) -ForegroundColor DarkGreen
+        }
+        $report.Add("- вкладка $tab`: " + $(if ($a.issues.Count) { '**' + ($a.issues -join '; ') + '**' } else { 'ок' }))
+      }
+      Invoke-Adb -Args @('shell', 'am', 'force-stop', 'ru.drevo.yazyka') -Quiet | Out-Null
     }
     $report.Add('')
   }

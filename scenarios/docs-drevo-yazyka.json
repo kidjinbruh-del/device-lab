@@ -1,0 +1,65 @@
+{
+  "name": "docs: скриншоты древа (нативное приложение)",
+  "package": "ru.drevo.yazyka",
+  "steps": [
+    { "do": "app", "op": "launch" },
+    { "do": "wait", "ms": 2600 },
+    { "do": "shot", "name": "01-derevo" },
+
+    { "do": "uiatap", "text": "Как в системе", "refresh": true },
+    { "do": "wait", "ms": 900 },
+    { "do": "shot", "name": "02-temnaya" },
+    { "do": "uiatap", "text": "Тёмная", "refresh": true },
+    { "do": "wait", "ms": 900 },
+    { "do": "shot", "name": "03-svetlaya" },
+    { "do": "uiatap", "text": "Светлая", "refresh": true },
+    { "do": "wait", "ms": 900 },
+
+    { "do": "uiatap", "text": "Продолжить", "refresh": true },
+    { "do": "wait", "ms": 1300 },
+    { "do": "shot", "name": "04-pasport-pravila" },
+    { "do": "swipe", "x": 360, "y": 1200, "dir": "up", "ms": 450 },
+    { "do": "wait", "ms": 800 },
+    { "do": "uiatap", "text": "вырастить листик", "refresh": true },
+    { "do": "wait", "ms": 900 },
+    { "do": "key", "code": "back" },
+    { "do": "wait", "ms": 900 },
+
+    { "do": "uiatap", "text": "Продолжить", "refresh": true },
+    { "do": "wait", "ms": 1300 },
+    { "do": "swipe", "x": 360, "y": 1200, "dir": "up", "ms": 450 },
+    { "do": "wait", "ms": 800 },
+    { "do": "uiatap", "text": "вырастить листик", "refresh": true },
+    { "do": "wait", "ms": 900 },
+    { "do": "key", "code": "back" },
+    { "do": "wait", "ms": 900 },
+
+    { "do": "uiatap", "text": "Продолжить", "refresh": true },
+    { "do": "wait", "ms": 1300 },
+    { "do": "swipe", "x": 360, "y": 1200, "dir": "up", "ms": 450 },
+    { "do": "wait", "ms": 800 },
+    { "do": "uiatap", "text": "вырастить листик", "refresh": true },
+    { "do": "wait", "ms": 900 },
+    { "do": "key", "code": "back" },
+    { "do": "wait", "ms": 1000 },
+    { "do": "shot", "name": "05-derevo-s-listom" },
+
+    { "do": "uiatap", "text": "Правила", "refresh": true },
+    { "do": "wait", "ms": 1100 },
+    { "do": "shot", "name": "06-spisok-pravil" },
+
+    { "do": "uiatap", "text": "Тренировка", "refresh": true },
+    { "do": "wait", "ms": 1200 },
+    { "do": "uiatap", "text": "33", "refresh": true },
+    { "do": "wait", "ms": 1000 },
+    { "do": "shot", "name": "07-trenerovka" },
+
+    { "do": "uiatap", "text": "Родителям", "refresh": true },
+    { "do": "wait", "ms": 1200 },
+    { "do": "shot", "name": "08-roditelyam" },
+
+    { "do": "uiatap", "text": "Дерево", "refresh": true },
+    { "do": "wait", "ms": 900 },
+    { "do": "log", "filter": "FATAL EXCEPTION", "expect": { "empty": true } }
+  ]
+}

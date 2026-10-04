@@ -28,18 +28,29 @@ function Invoke-Adb {
 function Get-ScreenSize {
   <# Физический размер экрана как @{w=;h=}.
      При `wm size 1080x2400` вывод содержит и Override, и Physical: брать надо
-     Override, иначе всё, что шире 720 px, ошибочно считается вылетом за экран. #>
+     Override, иначе всё, что шире 720 px, ошибочно считается вылетом за экран.
+
+     В альбомной ориентации ширину и высоту меняем местами: `wm size` всегда
+     отдаёт размеры «как у портрета», а узлы uiautomator уже лежат в
+     повёрнутой системе координат. Без этого весь альбомный прогон
+     наполняется ложными «выходит за экран». #>
   $out = (Invoke-Adb -Args @('shell', 'wm', 'size') -Quiet) -join ' '
+  $size = $null
   if ($out -match 'Override size:\s*(\d+)x(\d+)') {
-    return @{ w = [int]$Matches[1]; h = [int]$Matches[2]; override = $true }
+    $size = @{ w = [int]$Matches[1]; h = [int]$Matches[2]; override = $true }
+  } elseif ($out -match 'Physical size:\s*(\d+)x(\d+)') {
+    $size = @{ w = [int]$Matches[1]; h = [int]$Matches[2]; override = $false }
+  } elseif ($out -match '(\d+)x(\d+)') {
+    $size = @{ w = [int]$Matches[1]; h = [int]$Matches[2]; override = $false }
+  } else {
+    $size = @{ w = 720; h = 1612; override = $false }
   }
-  if ($out -match 'Physical size:\s*(\d+)x(\d+)') {
-    return @{ w = [int]$Matches[1]; h = [int]$Matches[2]; override = $false }
+  $rot = (Invoke-Adb -Args @('shell', 'settings', 'get', 'system', 'user_rotation') -Quiet |
+    Select-Object -First 1)
+  if ("$rot".Trim() -eq '1') {
+    $tmp = $size.w; $size.w = $size.h; $size.h = $tmp
   }
-  if ($out -match '(\d+)x(\d+)') {
-    return @{ w = [int]$Matches[1]; h = [int]$Matches[2]; override = $false }
-  }
-  return @{ w = 720; h = 1612; override = $false }
+  return $size
 }
 
 function Save-Screenshot {
