@@ -117,19 +117,10 @@ function Audit-Native {
         $issues += ('"' + ($t -replace '\s+', ' ') + '" подозрительно узкая подпись: ' + [math]::Round($v, 1) + ' px/символ и высота ' + [math]::Round($h) + ' px при медиане ' + [math]::Round($medPpc, 1) + '/' + [math]::Round($medH))
       }
     }
-    # Короткая подпись в две и более строки — почти всегда перенос по
-    # слогам («Правил а», «Тренир овка»). Считаем высоту одной строки как
-    # наименьшую среди подписей этого экрана: медиана завышена абзацами.
-    $oneLine = ($short | ForEach-Object { [double]($_.y2 - $_.y1) } | Measure-Object -Minimum).Minimum
-    if ($oneLine -gt 0) {
-      foreach ($n in $short) {
-        $t = "$($n.text)".Trim()
-        $h = [double]($n.y2 - $n.y1)
-        if ($t.Length -le 16 -and $h -gt $oneLine * 1.6) {
-          $issues += ('"' + ($t -replace '\s+', ' ') + '" переносится на ' + [math]::Round($h / $oneLine, 1) + ' строки (' + [math]::Round($h) + ' px при строке ' + [math]::Round($oneLine) + ' px)')
-        }
-      }
-    }
+    # Перенос коротких подписей («Правил а») автоматикой не ловится:
+    # uiautomator отдаёт для Compose весь текст целиком, и по высоте узла
+    # нельзя отличить перенос от крупного шрифта — проверка ругалась на
+    # каждую подпись нижней панели. Такие места смотрят глазами по снимку.
   }
   return @{ issues = $issues; width = "$($size.w)px" }
 }
