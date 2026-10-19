@@ -2,56 +2,196 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
 <title>device-lab</title>
 <style>
+  /* ── Токены ───────────────────────────────────────────────────────────
+     Один набор вместо hex-ов по файлу. Радиусы сведены к трём ступеням,
+     тело поднято до 14px: 11–13px на 125% масштабирования Windows
+     превращались в шум.                                                */
   :root{
-    --bg:#0b0e14; --panel:#141924; --panel2:#1b2130; --line:#2a3242;
-    --fg:#dbe2f0; --dim:#8b97ad; --accent:#39d0a0; --warn:#ffb454; --err:#ff6b6b;
+    --bg:#0b0e14; --panel:#141924; --panel-2:#1b2130; --code:#0b0f17;
+    --line:#2a3242; --line-strong:#3a4254;
+    --fg:#dbe2f0; --dim:#8b97ad;
+    --accent:#39d0a0; --accent-ink:#d6fff1; --accent-soft:#1d3b32;
+    --warn:#ffb454; --err:#ff6b6b;
+
+    --r-sm:7px; --r-md:10px; --r-lg:14px;
+    --fs-body:14px; --fs-label:12px; --fs-code:12px;
+    --tr:.18s cubic-bezier(.22,.9,.24,1);
   }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--fg);
-       font:13px/1.45 ui-monospace,Consolas,'Cascadia Mono',monospace}
-  header{display:flex;align-items:center;gap:12px;padding:8px 14px;
-         background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-  header h1{font-size:14px;margin:0;letter-spacing:.5px}
-  header .sp{flex:1}
-  .dot{width:9px;height:9px;border-radius:50%;background:#3a4254;display:inline-block}
-  .dot.on{background:var(--accent);box-shadow:0 0 8px var(--accent)}
-  main{display:flex;gap:14px;padding:14px;align-items:flex-start}
-  #stage{flex:0 0 auto}
-  #live{display:block;height:calc(100vh - 130px);max-width:44vw;border-radius:14px;
-        border:1px solid var(--line);background:#000;cursor:crosshair;touch-action:none;user-select:none}
-  #side{flex:1;min-width:340px;max-height:calc(100vh - 100px);overflow:auto;padding-right:4px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:12px}
-  .card h2{margin:0 0 8px;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--dim);font-weight:600}
-  button{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:7px;
-         padding:6px 10px;cursor:pointer;font:inherit;font-size:12px}
-  button:hover{border-color:var(--accent);color:#fff}
-  button.on{background:#1d3b32;border-color:var(--accent);color:#d6fff1}
-  button.danger:hover{border-color:var(--err);color:var(--err)}
-  button.mini{padding:3px 8px;font-size:11px}
-  .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
-  .row:last-child{margin-bottom:0}
-  input[type=text]{background:#0e131c;color:var(--fg);border:1px solid var(--line);border-radius:7px;
-                   padding:6px 8px;font:inherit;font-size:12px;min-width:0}
-  input[type=file]{font-size:11px;color:var(--dim)}
-  .grow{flex:1}
-  pre{margin:0;background:#0b0f17;border:1px solid var(--line);border-radius:8px;padding:8px;
-      white-space:pre-wrap;word-break:break-word;max-height:190px;overflow:auto;font-size:11.5px;color:#c9d4e6}
-  .lbl{color:var(--dim);font-size:11px}
-  #toast{position:fixed;right:16px;bottom:16px;background:var(--panel2);border:1px solid var(--accent);
-         border-radius:9px;padding:9px 14px;font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
-  #toast.show{opacity:1}
-  .err{color:var(--err)} .ok{color:var(--accent)} .warn{color:var(--warn)}
+
+  *,*::before,*::after{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--fg);
+    font:var(--fs-body)/1.5 ui-sans-serif,system-ui,'Segoe UI',Roboto,sans-serif;
+  }
+
+  code,pre,.mono{ font-family:ui-monospace,Consolas,'Cascadia Mono',monospace; }
+
+  /* ── Шапка ─────────────────────────────────────────────────────────── */
+  header{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:10px 14px;
+    background:color-mix(in srgb, var(--panel) 92%, transparent);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+    position:sticky; top:0; z-index:5;
+  }
+  header h1{ font-size:14px; margin:0; letter-spacing:.3px; font-weight:700; }
+  header .sp{ flex:1; }
+  .dot{
+    width:9px; height:9px; border-radius:50%;
+    background:var(--line-strong); display:inline-block;
+    transition:background var(--tr), box-shadow var(--tr);
+  }
+  .dot.on{ background:var(--accent); box-shadow:0 0 8px var(--accent); }
+  .dot.bad{ background:var(--err); box-shadow:0 0 8px var(--err); }
+
+  /* ── Сетка ─────────────────────────────────────────────────────────── */
+  main{ display:flex; gap:14px; padding:14px; align-items:flex-start; }
+  #stage{ flex:0 0 auto; }
+  #screen{
+    position:relative;
+    width:auto; height:calc(100vh - 128px);
+    aspect-ratio:720 / 1612;
+    max-width:44vw;
+    border-radius:var(--r-lg);
+    border:1px solid var(--line);
+    background:#000;
+    overflow:hidden;
+    cursor:crosshair;
+    touch-action:none;
+    user-select:none;
+  }
+  #screen img{
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit:contain; opacity:0;
+    transition:opacity .22s ease;
+    pointer-events:none;
+  }
+  #screen img.front{ opacity:1; }
+  #screen .skeleton{
+    position:absolute; inset:0;
+    background:linear-gradient(100deg, #10151f 30%, #182030 50%, #10151f 70%);
+    background-size:200% 100%;
+    animation:sk 1.3s linear infinite;
+  }
+  #screen.ready .skeleton{ opacity:0; pointer-events:none; transition:opacity .3s; }
+  @keyframes sk{ to{ background-position:-200% 0; } }
+
+  #side{ flex:1; min-width:340px; max-height:calc(100vh - 100px); overflow:auto; padding-right:4px; }
+
+  /* ── Карточки ──────────────────────────────────────────────────────── */
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--r-md);
+    padding:12px;
+    margin-bottom:12px;
+    transition:border-color var(--tr);
+  }
+  .card:focus-within{ border-color:color-mix(in srgb, var(--accent) 45%, var(--line)); }
+  .card h2{
+    margin:0 0 8px; font-size:var(--fs-label); letter-spacing:.08em;
+    text-transform:uppercase; color:var(--dim); font-weight:600;
+  }
+
+  /* ── Кнопки и поля ─────────────────────────────────────────────────── */
+  button{
+    background:var(--panel-2); color:var(--fg);
+    border:1px solid var(--line); border-radius:var(--r-sm);
+    padding:6px 10px; cursor:pointer; font:inherit; font-size:12.5px;
+    min-height:30px;
+    transition:border-color var(--tr), background var(--tr), color var(--tr), transform .1s;
+  }
+  button:hover{ border-color:var(--accent); color:#fff; }
+  button:active{ transform:translateY(1px); }
+  button:disabled{ opacity:.55; cursor:progress; }
+  button.on{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink); }
+  button.danger:hover{ border-color:var(--err); color:var(--err); }
+  button.mini{ padding:3px 8px; font-size:11.5px; min-height:26px; }
+
+  :where(button,input,select,textarea):focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
+
+  .row{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:6px; }
+  .row:last-child{ margin-bottom:0; }
+  .grow{ flex:1; min-width:0; }
+
+  input[type=text]{
+    background:var(--code); color:var(--fg);
+    border:1px solid var(--line); border-radius:var(--r-sm);
+    padding:6px 8px; font:inherit; font-size:12.5px; min-width:0;
+  }
+  input[type=file]{ font-size:12px; color:var(--dim); max-width:100%; }
+
+  pre{
+    margin:0; background:var(--code); border:1px solid var(--line);
+    border-radius:var(--r-sm); padding:8px;
+    white-space:pre-wrap; word-break:break-word;
+    max-height:190px; overflow:auto;
+    font-size:var(--fs-code); color:#c9d4e6;
+  }
+  .lbl{ color:var(--dim); font-size:var(--fs-label); }
+
+  .err{ color:var(--err); } .ok{ color:var(--accent); } .warn{ color:var(--warn); }
+
+  /* ── Тосты ─────────────────────────────────────────────────────────── */
+  #toast{
+    position:fixed; right:16px; bottom:16px; z-index:20;
+    display:flex; align-items:center; gap:8px;
+    max-width:min(520px, calc(100vw - 32px));
+    background:var(--panel-2);
+    border:1px solid var(--accent);
+    border-left-width:3px;
+    border-radius:var(--r-md);
+    padding:10px 14px; font-size:12.5px;
+    opacity:0; transform:translateY(8px); pointer-events:none;
+    transition:opacity var(--tr), transform var(--tr);
+  }
+  #toast.show{ opacity:1; transform:translateY(0); }
+  #toast[data-kind="bad"]{ border-color:var(--err); }
+  #toast[data-kind="warn"]{ border-color:var(--warn); }
+  #toast::before{ content:"✓"; color:var(--accent); font-weight:700; }
+  #toast[data-kind="bad"]::before{ content:"!"; color:var(--err); }
+  #toast[data-kind="warn"]::before{ content:"▲"; color:var(--warn); font-size:10px; }
+
+  /* ── Адаптив: телефон и планшет ─────────────────────────────────────── */
+  @media (max-width:900px){
+    main{ flex-direction:column; padding:10px; }
+    #stage{ width:100%; }
+    /* На телефоне превью не должно занимать весь первый экран:
+       иначе до кнопок нужно проскроллить целую «трубку». */
+    #screen{
+      width:auto; height:auto; max-height:58vh;
+      aspect-ratio:9 / 19.5;
+      margin:0 auto;
+    }
+    #side{ width:100%; min-width:0; max-height:none; overflow:visible; }
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{
+      animation-duration:.001ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:.001ms !important;
+    }
+  }
 </style>
 </head>
 <body>
 <header>
-  <span class="dot" id="liveDot"></span>
+  <span class="dot" id="liveDot" role="img" aria-label="состояние соединения"></span>
   <h1>device-lab</h1>
   <span class="lbl" id="fps">—</span>
   <span class="sp"></span>
-  <button class="mini" id="btnPause">пауза</button>
+  <button class="mini" id="btnPause" aria-pressed="false">пауза</button>
   <button class="mini" id="btnShot">снимок в shots/</button>
   <button class="mini" id="btnUnlock">разблокировать</button>
   <button class="mini" id="btnRefresh">обновить</button>
@@ -59,64 +199,76 @@
 </header>
 
 <main>
-  <div id="stage"><img id="live" alt="экран телефона"></div>
+  <div id="stage">
+    <div id="screen" role="application" aria-label="живой экран телефона: клик — тап, протяжка — свайп">
+      <img class="front" alt="" aria-hidden="true">
+      <img alt="" aria-hidden="true">
+      <div class="skeleton"></div>
+    </div>
+  </div>
 
   <div id="side">
 
     <div class="card">
       <h2>Устройство</h2>
       <div class="row">
-        <button data-key="4">назад</button>
-        <button data-key="3">домой</button>
-        <button data-key="187">обзор</button>
-        <button data-key="82">меню</button>
-        <button data-key="26">питание</button>
-        <button data-key="66">ввод</button>
-        <button data-key="67">⌫</button>
+        <button data-key="4" aria-label="назад">назад</button>
+        <button data-key="3" aria-label="домой">домой</button>
+        <button data-key="187" aria-label="обзор">обзор</button>
+        <button data-key="82" aria-label="меню">меню</button>
+        <button data-key="26" aria-label="питание">питание</button>
+        <button data-key="66" aria-label="ввод">ввод</button>
+        <button data-key="67" aria-label="стереть символ">⌫</button>
       </div>
-      <pre id="info">…</pre>
+      <pre id="info" aria-live="polite">…</pre>
     </div>
 
     <div class="card">
-      <h2>Приложение</h2>
+      <h2 id="app-title">Приложение</h2>
       <div class="row">
+        <label class="lbl" for="pkg">пакет</label>
         <input type="text" id="pkg" class="grow" value="ru.mooddiary">
         <button id="btnLaunch">запустить</button>
         <button id="btnStop">стоп</button>
         <button id="btnClear" class="danger">стереть данные</button>
       </div>
       <div class="row">
-        <label class="lbl">APK:</label>
+        <label class="lbl" for="apkFile">APK</label>
         <input type="file" id="apkFile" accept=".apk">
       </div>
+      <div class="row"><span class="lbl" id="apkStatus" role="status" aria-live="polite"></span></div>
     </div>
 
     <div class="card">
       <h2>JS в WebView</h2>
       <div class="row">
+        <label class="lbl" for="jsIn">код</label>
         <input type="text" id="jsIn" class="grow" placeholder="document.title">
         <button id="jsRun">выполнить</button>
       </div>
-      <pre id="jsOut">—</pre>
+      <pre id="jsOut" role="log" aria-live="polite">—</pre>
     </div>
 
     <div class="card">
       <h2>adb shell</h2>
       <div class="row">
+        <label class="lbl" for="shIn">команда</label>
         <input type="text" id="shIn" class="grow" value="dumpsys battery | head -3">
         <button id="shRun">выполнить</button>
       </div>
-      <pre id="shOut">—</pre>
+      <pre id="shOut" role="log" aria-live="polite">—</pre>
     </div>
 
     <div class="card">
       <h2>logcat</h2>
       <div class="row">
-        <input type="text" id="logFilter" class="grow" placeholder="фильтр, напр. mooddiary">
+        <label class="lbl" for="logFilter">фильтр</label>
+        <input type="text" id="logFilter" class="grow" placeholder="напр. mooddiary">
+        <label class="lbl" for="logN">строк</label>
         <input type="text" id="logN" style="width:64px" value="60">
-        <button class="mini on" id="logAuto">авто</button>
+        <button class="mini on" id="logAuto" aria-pressed="true">авто</button>
       </div>
-      <pre id="logOut">—</pre>
+      <pre id="logOut" role="log">—</pre>
     </div>
 
     <div class="card">
@@ -133,165 +285,357 @@
         <button class="mini" data-size="reset">сброс</button>
       </div>
       <div class="row">
-        <button class="mini" id="btnNight">тёмная тема</button>
-        <button class="mini" id="btnAnim">анимации: 0</button>
-        <button class="mini" id="btnPointer">координаты</button>
-        <button class="mini" id="btnRotate">поворот 0°</button>
+        <button class="mini" id="btnNight" aria-pressed="false">тёмная тема</button>
+        <button class="mini" id="btnAnim" aria-pressed="false">анимации: 1</button>
+        <button class="mini" id="btnPointer" aria-pressed="false">координаты</button>
+        <button class="mini" id="btnRotate" aria-pressed="false">поворот</button>
         <button class="mini" id="btnQuiet">погасить фон</button>
       </div>
-      <div class="lbl">экспериментальные размеры меняют экран до сброса (wm size reset)</div>
+      <div class="lbl">состояние переключателей считается от текущей страницы и сбрасывается при её перезагрузке</div>
     </div>
 
   </div>
 </main>
 
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 const $ = id => document.getElementById(id);
-const img = $('live'), dot = $('liveDot'), fps = $('fps');
-let paused = false, logTimer = null, lastFrame = performance.now();
+const screenEl = $('screen');
+const frames = screenEl.querySelectorAll('img');
+const dot = $('liveDot'), fps = $('fps');
 
-function toast(msg, bad){
-  const t = $('toast'); t.textContent = msg; t.className = 'show';
-  if (bad) t.style.borderColor = 'var(--err)'; else t.style.borderColor = 'var(--accent)';
-  clearTimeout(t._h); t._h = setTimeout(()=>{ t.className=''; }, 1800);
-}
-async function get(url){
-  try { const r = await fetch(url, {cache:'no-store'}); return await r.text(); }
-  catch(e){ return 'ERR ' + e.message; }
-}
-async function post(url, body){
-  try { const r = await fetch(url, {method:'POST', body}); return await r.text(); }
-  catch(e){ return 'ERR ' + e.message; }
+let paused = false;
+let front = 0;
+let lastFrame = 0;
+
+/* ── Обратная связь ────────────────────────────────────────────────────
+   Один тост с видом сообщения (успех / ошибка / внимание) и aria-live:
+   раньше параметр bad не передавался ни разу, поэтому ошибка выглядела
+   как успех, а скринридер молчал.                                       */
+let toastTimer = null;
+function toast(msg, kind){
+  const t = $('toast');
+  const text = String(msg == null ? '' : msg).trim();
+  if (!text) return;
+  t.textContent = text.length > 400 ? text.slice(0, 400) + '…' : text;
+  t.dataset.kind = kind || 'ok';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), kind === 'bad' ? 6000 : 2600);
 }
 
-/* ---- живой экран: клик = тап, протяжка = свайп, колесо = прокрутка ---- */
-function nat(){ return { w: img.naturalWidth || 720, h: img.naturalHeight || 1612 }; }
+/* Один транспорт: проверяет HTTP-статус, ждёт занятость кнопки и
+   показывает ошибку. Раньше get()/post() возвращали строку "ERR …",
+   а вызывающий код её выбрасывал — при упавшем сервере кнопка молчала. */
+async function api(url, opts, btn){
+  const label = btn ? btn.textContent : null;
+  if (btn){ btn.disabled = true; btn.textContent = '…'; }
+  try{
+    const r = await fetch(url, Object.assign({ cache:'no-store' }, opts || {}));
+    const text = await r.text();
+    if (!r.ok) throw new Error('HTTP ' + r.status + (text ? ': ' + text : ''));
+    if (/^ERR\b/.test(text)) throw new Error(text);
+    return text;
+  } catch (e){
+    toast(e.message || 'сервер панели не отвечает', 'bad');
+    throw e;
+  } finally {
+    if (btn){ btn.disabled = false; btn.textContent = label; }
+  }
+}
+const get  = (url, btn) => api(url, { cache:'no-store' }, btn);
+const post = (url, body, btn) => api(url, { method:'POST', body }, btn);
+
+/* Действие без полезного ответа: ошибку покажет api(), успех — тихо. */
+function fire(url, btn){ return get(url, btn).catch(() => {}); }
+
+/* ── Живой экран ───────────────────────────────────────────────────────
+   Два <img> и кроссфейд по opacity вместо переустановки src (кадры
+   мигали). Опрос останавливается, когда вкладка скрыта.                */
+function nat(){
+  const img = frames[front];
+  return { w: img.naturalWidth || 720, h: img.naturalHeight || 1612 };
+}
 function toNative(ev){
-  const r = img.getBoundingClientRect(), n = nat();
-  return { x: Math.round((ev.clientX - r.left) / r.width * n.w),
-           y: Math.round((ev.clientY - r.top)  / r.height * n.h) };
+  const r = screenEl.getBoundingClientRect(), n = nat();
+  return {
+    x: Math.round((ev.clientX - r.left) / r.width * n.w),
+    y: Math.round((ev.clientY - r.top) / r.height * n.h),
+  };
 }
+
 let down = null;
-img.addEventListener('contextmenu', e => e.preventDefault());
-img.addEventListener('pointerdown', e => {
-  down = Object.assign(toNative(e), {t: Date.now()});
-  img.setPointerCapture(e.pointerId);
+screenEl.addEventListener('contextmenu', e => e.preventDefault());
+screenEl.addEventListener('pointerdown', e => {
+  down = Object.assign(toNative(e), { t: Date.now() });
+  screenEl.setPointerCapture(e.pointerId);
 });
-img.addEventListener('pointerup', e => {
+screenEl.addEventListener('pointercancel', () => { down = null; });
+screenEl.addEventListener('pointerup', e => {
   if (!down) return;
-  const p = toNative(e), dt = Date.now() - down.t;
+  const p = toNative(e), dt = Math.max(1, Date.now() - down.t);
   const dx = p.x - down.x, dy = p.y - down.y, dist = Math.hypot(dx, dy);
-  if (dist < 14) {
-    if (dt > 550) get(`/api/press?x=${p.x}&y=${p.y}&ms=${dt}`);
-    else get(`/api/tap?x=${p.x}&y=${p.y}`);
+  if (dist < 14){
+    if (dt > 550) fire(`/api/press?x=${p.x}&y=${p.y}&ms=${dt}`);
+    else fire(`/api/tap?x=${p.x}&y=${p.y}`);
   } else {
-    get(`/api/swipe?x1=${down.x}&y1=${down.y}&x2=${p.x}&y2=${p.y}&ms=${Math.max(140, dt)}`);
+    fire(`/api/swipe?x1=${down.x}&y1=${down.y}&x2=${p.x}&y2=${p.y}&ms=${Math.max(140, dt)}`);
   }
   down = null;
 });
-img.addEventListener('wheel', e => {
+
+/* Колесо: нормализуем deltaMode, иначе на тачпаде один «щелчок» улетал
+   на пол-экрана, а на мыши — на два пикселя. */
+screenEl.addEventListener('wheel', e => {
   e.preventDefault();
-  const n = nat(), cx = Math.round(n.w / 2), d = 620;
-  const y1 = e.deltaY > 0 ? Math.round(n.h * .68) : Math.round(n.h * .32);
-  const y2 = e.deltaY > 0 ? y1 - d : y1 + d;
-  get(`/api/swipe?x1=${cx}&y1=${y1}&x2=${cx}&y2=${y2}&ms=330`);
-}, {passive:false});
+  const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+  const delta = Math.max(-1200, Math.min(1200, e.deltaY * unit));
+  if (!delta) return;
+  const n = nat(), cx = Math.round(n.w / 2);
+  const d = Math.min(Math.round(n.h * 0.45), Math.abs(delta) * 1.6);
+  const y1 = delta > 0 ? Math.round(n.h * .68) : Math.round(n.h * .32);
+  const y2 = delta > 0 ? y1 - d : y1 + d;
+  fire(`/api/swipe?x1=${cx}&y1=${y1}&x2=${cx}&y2=${y2}&ms=330`);
+}, { passive:false });
 
-function loop(){
-  if (paused) { setTimeout(loop, 250); return; }
-  img.onload = () => {
-    const dt = performance.now() - lastFrame; lastFrame = performance.now();
-    fps.textContent = (1000 / Math.max(dt, 1)).toFixed(1) + ' fps · ' + nat().w + '×' + nat().h;
+let busy = false;
+async function tick(){
+  if (paused || document.hidden || busy) return;
+  busy = true;
+  try{
+    const r = await fetch('/api/shot.png?ts=' + Date.now(), { cache:'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const url = URL.createObjectURL(await r.blob());
+    const back = 1 - front;
+    const img = frames[back];
+    await new Promise(res => {
+      img.onload = res; img.onerror = res;
+      img.src = url;
+    });
+    if (!img.naturalWidth) { URL.revokeObjectURL(url); throw new Error('пустой кадр'); }
+    frames[front].classList.remove('front');
+    img.classList.add('front');
+    front = back;
+    screenEl.classList.add('ready');
+    dot.classList.remove('bad');
     dot.classList.add('on');
-    setTimeout(loop, 100);
-  };
-  img.onerror = () => { dot.classList.remove('on'); setTimeout(loop, 1200); };
-  img.src = '/api/shot.png?ts=' + Date.now();
+
+    const now = performance.now();
+    if (lastFrame) fps.textContent = (1000 / Math.max(now - lastFrame, 1)).toFixed(1) + ' fps · ' + nat().w + '×' + nat().h;
+    lastFrame = now;
+    setTimeout(() => URL.revokeObjectURL(url), 1200);
+  } catch (e){
+    dot.classList.remove('on');
+    dot.classList.add('bad');
+    fps.textContent = 'нет кадров';
+  } finally {
+    busy = false;
+  }
 }
-loop();
+setInterval(tick, 250);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+tick();
 
-/* ---- устройство ---- */
-document.querySelectorAll('[data-key]').forEach(b =>
-  b.onclick = () => get('/api/key?code=' + b.dataset.key));
-$('btnPause').onclick = () => { paused = !paused; $('btnPause').classList.toggle('on', paused);
-                                $('btnPause').textContent = paused ? 'показ паузой' : 'пауза'; };
-$('btnShot').onclick = async () => toast(await get('/api/shot-save'));
-$('btnUnlock').onclick = () => get('/api/sys?op=unlock');
-$('btnReboot').onclick = () => { if (confirm('Перезагрузить телефон?')) get('/api/sys?op=reboot'); };
-$('btnRefresh').onclick = () => { loadInfo(); loadLogs(); toast('обновлено'); };
-
-async function loadInfo(){
-  try {
-    const r = await fetch('/api/info', {cache:'no-store'});
-    $('info').textContent = JSON.stringify(await r.json(), null, 1);
-  } catch(e){ $('info').textContent = 'ERR ' + e.message; }
-}
-loadInfo(); setInterval(loadInfo, 10000);
-
-/* ---- приложение ---- */
-const pkgVal = () => $('pkg').value.trim();
-$('btnLaunch').onclick = () => get('/api/app?op=launch&pkg=' + encodeURIComponent(pkgVal()));
-$('btnStop').onclick   = () => get('/api/app?op=stop&pkg=' + encodeURIComponent(pkgVal()));
-$('btnClear').onclick  = () => { if (confirm('Стереть данные ' + pkgVal() + '?'))
-                                   get('/api/app?op=clear&pkg=' + encodeURIComponent(pkgVal())); };
-$('apkFile').onchange = async e => {
-  const f = e.target.files[0]; if (!f) return;
-  toast('ставлю ' + f.name);
-  $('jsOut').textContent = 'установка…';
-  $('jsOut').textContent = await post('/api/install?name=' + encodeURIComponent(f.name), await f.arrayBuffer());
-  e.target.value = '';
-};
-
-/* ---- консоль JS с историей ---- */
-let hist = [], hi = -1;
-async function runJs(){
-  const v = $('jsIn').value.trim(); if (!v) return;
-  hist.push(v); hi = hist.length;
-  $('jsOut').textContent = '…';
-  const t = await post('/api/js', v);
-  $('jsOut').textContent = t;
-  $('jsOut').className = t.startsWith('ERR') ? 'err' : 'ok';
-}
-$('jsRun').onclick = runJs;
-$('jsIn').addEventListener('keydown', e => {
-  if (e.key === 'Enter') runJs();
-  if (e.key === 'ArrowUp'){ e.preventDefault(); if (hi > 0){ hi--; $('jsIn').value = hist[hi]; } }
-  if (e.key === 'ArrowDown'){ e.preventDefault(); if (hi < hist.length - 1){ hi++; $('jsIn').value = hist[hi]; } else { hi = hist.length; $('jsIn').value=''; } }
+/* ── Устройство ──────────────────────────────────────────────────────── */
+document.querySelectorAll('[data-key]').forEach(b => {
+  b.addEventListener('click', () => fire('/api/key?code=' + b.dataset.key, b));
 });
 
-/* ---- shell ---- */
-$('shRun').onclick = async () => {
-  const v = $('shIn').value.trim(); if (!v) return;
-  $('shOut').textContent = '…';
-  $('shOut').textContent = await post('/api/shell', v);
-};
+function setPressed(btn, on){
+  if (!btn) return;
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-pressed', String(!!on));
+}
 
-/* ---- logcat ---- */
+$('btnPause').addEventListener('click', () => {
+  paused = !paused;
+  setPressed($('btnPause'), paused);
+  $('btnPause').textContent = paused ? 'продолжить' : 'пауза';
+});
+
+$('btnShot').addEventListener('click', async () => {
+  try { toast(await get('/api/shot-save', $('btnShot'))); } catch (e) {}
+});
+
+$('btnUnlock').addEventListener('click', e => fire('/api/sys?op=unlock', e.currentTarget));
+
+$('btnReboot').addEventListener('click', async () => {
+  if (!confirm('Перезагрузить телефон?')) return;
+  try { toast(await get('/api/sys?op=reboot', $('btnReboot'))); } catch (e) {}
+});
+
+$('btnRefresh').addEventListener('click', async e => {
+  const btn = e.currentTarget;
+  try {
+    await Promise.all([loadInfo(btn), loadLogs()]);
+    toast('обновлено');
+  } catch (err) {}
+});
+
+/* ── Устройство: инфо ────────────────────────────────────────────────── */
+async function loadInfo(btn){
+  try{
+    const r = await fetch('/api/info', { cache:'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    $('info').textContent = JSON.stringify(await r.json(), null, 1);
+  } catch (e){
+    $('info').textContent = 'нет связи с устройством: ' + e.message;
+    $('info').className = 'err';
+  }
+}
+loadInfo();
+setInterval(() => loadInfo(), 10000);
+
+/* ── Приложение ──────────────────────────────────────────────────────── */
+const pkgVal = () => $('pkg').value.trim();
+
+$('btnLaunch').addEventListener('click', e =>
+  fire('/api/app?op=launch&pkg=' + encodeURIComponent(pkgVal()), e.currentTarget));
+$('btnStop').addEventListener('click', e =>
+  fire('/api/app?op=stop&pkg=' + encodeURIComponent(pkgVal()), e.currentTarget));
+$('btnClear').addEventListener('click', e => {
+  if (!confirm('Стереть данные ' + pkgVal() + '?')) return;
+  fire('/api/app?op=clear&pkg=' + encodeURIComponent(pkgVal()), e.currentTarget);
+});
+
+$('apkFile').addEventListener('change', async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const status = $('apkStatus');
+  status.textContent = 'установка ' + f.name + '…';
+  status.className = 'lbl warn';
+  try{
+    const out = await post('/api/install?name=' + encodeURIComponent(f.name), await f.arrayBuffer());
+    status.textContent = out || 'готово';
+    status.className = 'lbl ok';
+    toast('установлено: ' + f.name);
+  } catch (err){
+    status.textContent = 'не установилось: ' + err.message;
+    status.className = 'lbl err';
+  } finally {
+    e.target.value = '';
+  }
+});
+
+/* ── JS-консоль с историей ───────────────────────────────────────────── */
+let hist = [], hi = -1;
+async function runJs(){
+  const v = $('jsIn').value.trim();
+  if (!v) return;
+  hist.push(v); hi = hist.length;
+  $('jsOut').textContent = '…';
+  $('jsOut').className = '';
+  try{
+    const t = await post('/api/js', v, $('jsRun'));
+    $('jsOut').textContent = t;
+    $('jsOut').className = /^ERR\b/.test(t) ? 'err' : 'ok';
+  } catch (e){
+    $('jsOut').textContent = e.message;
+    $('jsOut').className = 'err';
+  }
+}
+$('jsRun').addEventListener('click', runJs);
+$('jsIn').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); runJs(); }
+  if (e.key === 'ArrowUp'){ e.preventDefault(); if (hi > 0){ hi--; $('jsIn').value = hist[hi]; } }
+  if (e.key === 'ArrowDown'){ e.preventDefault();
+    if (hi < hist.length - 1){ hi++; $('jsIn').value = hist[hi]; }
+    else { hi = hist.length; $('jsIn').value = ''; } }
+});
+
+/* ── shell ───────────────────────────────────────────────────────────── */
+async function runShell(){
+  const v = $('shIn').value.trim();
+  if (!v) return;
+  $('shOut').textContent = '…';
+  try{
+    $('shOut').textContent = await post('/api/shell', v, $('shRun'));
+  } catch (e){
+    $('shOut').textContent = e.message;
+    $('shOut').className = 'err';
+  }
+}
+$('shRun').addEventListener('click', runShell);
+$('shIn').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); runShell(); } });
+
+/* ── logcat ──────────────────────────────────────────────────────────── */
 async function loadLogs(){
   const n = ($('logN').value || 60).trim();
   const f = ($('logFilter').value || '').trim();
-  $('logOut').textContent = await get(`/api/logs?n=${encodeURIComponent(n)}&filter=${encodeURIComponent(f)}`);
-  if ($('logAuto').classList.contains('on')) $('logOut').scrollTop = $('logOut').scrollHeight;
+  try{
+    $('logOut').textContent = await get(`/api/logs?n=${encodeURIComponent(n)}&filter=${encodeURIComponent(f)}`);
+    $('logOut').className = '';
+    if ($('logAuto').classList.contains('on')) $('logOut').scrollTop = $('logOut').scrollHeight;
+  } catch (e){
+    $('logOut').textContent = 'logcat недоступен: ' + e.message;
+    $('logOut').className = 'err';
+  }
 }
-$('logAuto').onclick = () => $('logAuto').classList.toggle('on');
+$('logAuto').addEventListener('click', e => {
+  const on = !e.currentTarget.classList.contains('on');
+  setPressed(e.currentTarget, on);
+  if (on) $('logOut').scrollTop = $('logOut').scrollHeight;
+});
 $('logFilter').addEventListener('keydown', e => { if (e.key === 'Enter') loadLogs(); });
-loadLogs(); logTimer = setInterval(loadLogs, 2500);
+loadLogs();
+setInterval(loadLogs, 2500);
 
-/* ---- условия ---- */
+/* ── Условия ─────────────────────────────────────────────────────────── */
 document.querySelectorAll('[data-font]').forEach(b =>
-  b.onclick = () => get('/api/sys?op=font&v=' + b.dataset.font));
+  b.addEventListener('click', e => fire('/api/sys?op=font&v=' + b.dataset.font, e.currentTarget)));
+
 document.querySelectorAll('[data-size]').forEach(b =>
-  b.onclick = () => {
-    if (b.dataset.size === 'reset') get('/api/sys?op=sizeReset');
-    else if (confirm('Изменить размер экрана на ' + b.dataset.size + '?')) get('/api/sys?op=size&v=' + b.dataset.size);
+  b.addEventListener('click', e => {
+    if (b.dataset.size === 'reset') return fire('/api/sys?op=sizeReset', e.currentTarget);
+    if (!confirm('Изменить размер экрана на ' + b.dataset.size + '?')) return;
+    fire('/api/sys?op=size&v=' + b.dataset.size, e.currentTarget);
+  }));
+
+/* Тумблеры больше не врут: значение считается от собственного состояния
+   кнопки, а не всегда "yes". */
+function bindToggle(id, op, onVal, offVal){
+  const btn = $(id);
+  if (!btn) return;
+  btn.addEventListener('click', e => {
+    const next = !btn.classList.contains('on');
+    setPressed(btn, next);
+    fire('/api/sys?op=' + op + '&v=' + (next ? onVal : offVal));
   });
-$('btnNight').onclick = () => get('/api/sys?op=night&v=yes');
-$('btnAnim').onclick = () => get('/api/sys?op=anim&v=' + ($('btnAnim').classList.contains('on') ? 1 : 0));
-$('btnPointer').onclick = () => get('/api/sys?op=pointer&v=' + ($('btnPointer').classList.contains('on') ? 0 : 1));
-$('btnRotate').onclick = () => get('/api/sys?op=rotate&v=' + ($('btnRotate').classList.contains('on') ? 0 : 1));
-$('btnQuiet').onclick = () => get('/api/sys?op=quiet');
+}
+bindToggle('btnNight', 'night', 'yes', 'no');
+
+$('btnAnim').addEventListener('click', e => {
+  const btn = e.currentTarget;
+  const next = !btn.classList.contains('on');
+  setPressed(btn, next);
+  btn.textContent = 'анимации: ' + (next ? 1 : 0);
+  fire('/api/sys?op=anim&v=' + (next ? 1 : 0));
+});
+$('btnPointer').addEventListener('click', e => {
+  const btn = e.currentTarget;
+  const next = !btn.classList.contains('on');
+  setPressed(btn, next);
+  fire('/api/sys?op=pointer&v=' + (next ? 1 : 0));
+});
+$('btnRotate').addEventListener('click', e => {
+  const btn = e.currentTarget;
+  const next = !btn.classList.contains('on');
+  setPressed(btn, next);
+  btn.textContent = 'поворот ' + (next ? '1' : '0');
+  fire('/api/sys?op=rotate&v=' + (next ? 1 : 0));
+});
+$('btnQuiet').addEventListener('click', e => fire('/api/sys?op=quiet', e.currentTarget));
+
+/* ── Клавиатура ──────────────────────────────────────────────────────── */
+document.addEventListener('keydown', e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 'r'){ e.preventDefault(); $('btnRefresh').click(); }
+  if (k === 'p'){ e.preventDefault(); $('btnPause').click(); }
+  if (k === 's'){ e.preventDefault(); $('btnShot').click(); }
+});
 </script>
 </body>
 </html>
